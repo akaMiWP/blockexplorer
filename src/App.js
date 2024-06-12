@@ -22,6 +22,14 @@ function App() {
   const [blockNumber, setBlockNumber] = useState();
   const [blocks, setBlocks] = useState([]);
   const [blockWithTransactions, setBlockWithTransactions] = useState([]);
+  const [isPopoverVisible, setIsPopoverVisible] = useState(false);
+  const [selectedBlock, setSelectedBlock] = useState();
+  const [blockDetails, setBlockDetails] = useState(null);
+
+  const togglePopover = (block) => {
+    setIsPopoverVisible(!isPopoverVisible);
+    setSelectedBlock(block);
+  };
 
   useEffect(() => {
     async function getBlockNumber() {
@@ -38,11 +46,22 @@ function App() {
         currentBlockNumber
       );
       setBlockWithTransactions(blockWithTransactions);
-      console.log(blockWithTransactions);
     }
 
     getBlockNumber();
   }, []);
+
+  useEffect(() => {
+    async function fetchBlockDetails() {
+      if (selectedBlock !== null) {
+        const details = await alchemy.core.getBlock(selectedBlock);
+        setBlockDetails(details);
+        console.log(details.transactions);
+      }
+    }
+
+    fetchBlockDetails();
+  }, [selectedBlock]);
 
   return (
     <div className="bottom-section">
@@ -52,7 +71,15 @@ function App() {
           <h4>Current block: {blockNumber}</h4>
           {blocks.map((block) => (
             <div key={block} className="block">
-              <p>Block Number: {block}</p>
+              <p>
+                Block Number:{" "}
+                <button
+                  onClick={() => togglePopover(block)}
+                  className="popover-button"
+                >
+                  {block}
+                </button>
+              </p>
             </div>
           ))}
         </div>
@@ -69,6 +96,36 @@ function App() {
             ))}
         </div>
       </div>
+      {isPopoverVisible && (
+        <div className="dialog-overlay">
+          <div className="dialog">
+            <h3>Block Details</h3>
+            {blockDetails ? (
+              <div>
+                <p>Block Number: {blockDetails.number}</p>
+                <p>
+                  Timestamp:{" "}
+                  {new Date(blockDetails.timestamp * 1000).toString()}
+                </p>
+                <p>Transactions: {blockDetails.transactions.length}</p>
+                {blockDetails.transactions.slice(0, 10).map((transaction) => (
+                  <div key={transaction} className="transaction">
+                    <p>Transaction Hash: {transaction}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p>Loading...</p>
+            )}
+            <button
+              onClick={() => togglePopover(null)}
+              className="close-button"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
